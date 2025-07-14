@@ -7,3 +7,6 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: 3.11
+apt-get update && apt-get install -y tesseract-ocr poppler-utils
+
+    

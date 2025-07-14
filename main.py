@@ -1,17 +1,20 @@
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import StreamingResponse
-from pdf2docx import Converter
+from fastapi.responses import FileResponse
+from pdf2image import convert_from_bytes
+import pytesseract
+from io import BytesIO
 import os
+from pdf2docx import Converter
 import uuid
 
 app = FastAPI()
 
-@app.post("/convert")
-async def convert_pdf_to_docx(file: UploadFile = File(...)):
-    # 1. Save uploaded PDF to a temp file
-    input_filename = f"temp_{uuid.uuid4().hex}.pdf"
-    with open(input_filename, "wb") as f:
-        f.write(await file.read())
+@app.post("/convert-ocr")
+async def convert_ocr(file: UploadFile = File(...)):
+    contents = await file.read()
+    images = convert_from_bytes(contents)
+    text = "\n".join(pytesseract.image_to_string(img) for img in images)
+    return {"text": text}
 
     # 2. Generate output file path
     output_filename = input_filename.replace(".pdf", ".docx")
