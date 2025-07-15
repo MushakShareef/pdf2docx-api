@@ -48,3 +48,6 @@ async def convert_ocr(file: UploadFile = File(...), background_tasks: Background
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": "attachment; filename=converted.docx"}
     )
+@app.get("/test")
+async def test():
+    return {"message": "CORS is working"}
