@@ -5,3 +5,5 @@ pytesseract
 pdf2docx
 python-multipart
 Pillow
+python-docx
+
