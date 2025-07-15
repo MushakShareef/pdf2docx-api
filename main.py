@@ -3,11 +3,21 @@ from fastapi.responses import StreamingResponse
 from pdf2image import convert_from_bytes
 from docx import Document
 import pytesseract
+from fastapi.middleware.cors import CORSMiddleware
 from io import BytesIO
 import os
 import uuid
 
 app = FastAPI()
+
+# 👇 Add this block
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Or specify your frontend URL instead of "*"
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.post("/convert-ocr")
 async def convert_ocr(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
