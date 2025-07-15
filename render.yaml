@@ -1,12 +1,9 @@
 services:
   - type: web
-    name: pdf2docx-ocr
-    runtime: python
-    buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host=0.0.0.0 --port=10000
-    envVars:
-      - key: PYTHONUNBUFFERED
-        value: "true"
-apt-get update && apt-get install -y poppler-utils tesseract-ocr
-
-    
+    name: pdf2docx-api
+    env: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./Dockerfile
+    buildCommand: ""
+    startCommand: ""
