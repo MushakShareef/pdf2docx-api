@@ -1,10 +1,10 @@
 from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import FileResponse
+from fastapi.responses import StreamingResponse
 from pdf2image import convert_from_bytes
+from docx import Document
 import pytesseract
 from io import BytesIO
 import os
-from pdf2docx import Converter
 import uuid
 
 app = FastAPI()
@@ -12,29 +12,32 @@ app = FastAPI()
 @app.post("/convert-ocr")
 async def convert_ocr(file: UploadFile = File(...)):
     contents = await file.read()
+
+    # 1. Convert PDF pages to images
     images = convert_from_bytes(contents)
-    text = "\n".join(pytesseract.image_to_string(img) for img in images)
-    return {"text": text}
 
-    # 2. Generate output file path
-    output_filename = input_filename.replace(".pdf", ".docx")
+    # 2. Use OCR to extract text from each image
+    extracted_text = "\n".join(pytesseract.image_to_string(img) for img in images)
 
-    # 3. Convert PDF to DOCX
-    cv = Converter(input_filename)
-    cv.convert(output_filename, start=0, end=None)
-    cv.close()
+    # 3. Create Word document
+    doc = Document()
+    for line in extracted_text.splitlines():
+        doc.add_paragraph(line)
 
-    # 4. Return DOCX as streaming response
-    response = StreamingResponse(
+    # 4. Save to a temporary DOCX file
+    output_filename = f"{uuid.uuid4()}.docx"
+    doc.save(output_filename)
+
+    # 5. Stream the file as response
+    def cleanup():
+        try:
+            os.remove(output_filename)
+        except:
+            pass
+
+    return StreamingResponse(
         open(output_filename, "rb"),
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        headers={"Content-Disposition": f"attachment; filename=converted.docx"},
+        headers={"Content-Disposition": "attachment; filename=converted.docx"},
+        background=cleanup
     )
-
-    # 5. Cleanup after sending
-    @response.call_on_close
-    def cleanup():
-        os.remove(input_filename)
-        os.remove(output_filename)
-
-    return response

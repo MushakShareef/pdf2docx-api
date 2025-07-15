@@ -1,12 +1,11 @@
 services:
   - type: web
-    name: pdf-to-docx-api
+    name: pdf2docx-ocr
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: uvicorn main:app --host 0.0.0.0 --port 10000
+    startCommand: uvicorn main:app --host=0.0.0.0 --port=10000
     envVars:
-      - key: PYTHON_VERSION
-        value: 3.11
-apt-get update && apt-get install -y tesseract-ocr poppler-utils
+      - key: PYTHONUNBUFFERED
+        value: "true"
 
     
