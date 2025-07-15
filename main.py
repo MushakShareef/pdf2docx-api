@@ -11,6 +11,14 @@ import traceback
 
 app = FastAPI()
 
+
+# ✅ Allow both localhost (dev) and Vercel (prod)
+origins = [
+    "http://localhost:5173",
+    "https://convertingtools.vercel.app"
+]
+
+
 # CORS settings
 app.add_middleware(
     CORSMiddleware,
