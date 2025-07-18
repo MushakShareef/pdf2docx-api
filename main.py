@@ -1,6 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse
 from pdf2image import convert_from_bytes
 from docx import Document
 import pytesseract
@@ -12,17 +13,12 @@ import traceback
 app = FastAPI()
 
 
-# ✅ Allow both localhost (dev) and Vercel (prod)
-origins = [
-    "http://localhost:5173",
-    "https://convertingtools.vercel.app"
-]
-
-
-# CORS settings
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://convertingtools.vercel.app"],
+    allow_origins=[
+        "http://localhost:5173",  # ✅ local dev
+        "https://convertingtools.vercel.app"  # ✅ deployed frontend
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -44,10 +40,11 @@ async def convert_ocr(file: UploadFile = File(...), background_tasks: Background
 
         background_tasks.add_task(os.remove, output_filename)
 
-        return StreamingResponse(
-            open(output_filename, "rb"),
+        return FileResponse(
+            path=output_filename,
+            filename="converted.docx",
             media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-            headers={"Content-Disposition": "attachment; filename=converted.docx"}
+            headers={"Access-Control-Allow-Origin": "*"}  # manually add if needed
         )
 
     except Exception as e:
