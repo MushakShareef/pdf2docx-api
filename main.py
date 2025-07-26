@@ -114,6 +114,8 @@ async def convert_excel(file: UploadFile = File(...), background_tasks: Backgrou
         import pandas as pd
 
         output_filename = f"{uuid.uuid4()}.xlsx"
+        text_found = False 
+
         with pdfplumber.open(file.file) as pdf:
             with pd.ExcelWriter(output_filename, engine="openpyxl") as writer:
                 for i, page in enumerate(pdf.pages):
@@ -126,8 +128,14 @@ async def convert_excel(file: UploadFile = File(...), background_tasks: Backgrou
                                 # Save text
         if text:
             lines = [line.strip() for line in text.split("\n") if line.strip()]
-            df_text = pd.DataFrame([line.strip() for line in text.split('\n')], columns=["Text"])
+            df_text = pd.DataFrame(lines, columns=["Extracted Text"])
             df_text.to_excel(writer, sheet_name=f"Page_{i+1}_Text", index=False)
+            text_found = True
+            
+        # ⚠️ If no text was found in any page, write a dummy sheet
+        if not text_found:
+            df_empty = pd.DataFrame([["No text could be extracted from this PDF."]], columns=["Notice"])
+            df_empty.to_excel(writer, sheet_name="Empty", index=False)
 
             # Save table
             # if table:
