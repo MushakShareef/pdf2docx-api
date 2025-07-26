@@ -110,37 +110,39 @@ async def convert_excel(file: UploadFile = File(...), background_tasks: Backgrou
             )
 
         # 🧠 PDF → Excel logic
-        # import pdfplumber
+        import pdfplumber
         import pandas as pd
 
         output_filename = f"{uuid.uuid4()}.xlsx"
-        # with pdfplumber.open(file.file) as pdf:
-            # with pd.ExcelWriter(output_filename, engine="openpyxl") as writer:
-            #     for i, page in enumerate(pdf.pages):
-            #         text = page.extract_text()
-            #         table = page.extract_table()
-        output_filename = f"{uuid.uuid4()}.xlsx"
-        df = pd.DataFrame([["Hello Ameer!", "This is a test."]], columns=["Column A", "Column B"])
-        df.to_excel(output_filename, index=False)         
+        with pdfplumber.open(file.file) as pdf:
+            with pd.ExcelWriter(output_filename, engine="openpyxl") as writer:
+                for i, page in enumerate(pdf.pages):
+                    text = page.extract_text()
+                    # table = page.extract_table()
+
+        # output_filename = f"{uuid.uuid4()}.xlsx"
+        # df = pd.DataFrame([["Hello Ameer!", "This is a test."]], columns=["Column A", "Column B"])
+        # df.to_excel(output_filename, index=False)         
                                 # Save text
-        # if text:
-        #     df_text = pd.DataFrame([line.strip() for line in text.split('\n')], columns=["Text"])
-        #     df_text.to_excel(writer, sheet_name=f"Page_{i+1}_Text", index=False)
+        if text:
+            lines = [line.strip() for line in text.split("\n") if line.strip()]
+            df_text = pd.DataFrame([line.strip() for line in text.split('\n')], columns=["Text"])
+            df_text.to_excel(writer, sheet_name=f"Page_{i+1}_Text", index=False)
 
-        # Save table
-        # if table:
-        #     df_table = pd.DataFrame(table[1:], columns=table[0])
-        #     df_table.to_excel(writer, sheet_name=f"Page_{i+1}_Table", index=False)
+            # Save table
+            # if table:
+            #     df_table = pd.DataFrame(table[1:], columns=table[0])
+            #     df_table.to_excel(writer, sheet_name=f"Page_{i+1}_Table", index=False)
 
-        background_tasks.add_task(delayed_delete, output_filename)
+            background_tasks.add_task(delayed_delete, output_filename)
 
-        response = FileResponse(
-            path=output_filename,
-            filename="converted.xlsx",
-            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-        response.headers["Access-Control-Allow-Origin"] = "*"
-        return response
+            response = FileResponse(
+                path=output_filename,
+                filename="converted.xlsx",
+                media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+            response.headers["Access-Control-Allow-Origin"] = "*"
+            return response
 
     except Exception as e:
         print("🔥 ERROR:", traceback.format_exc())
