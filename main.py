@@ -129,15 +129,17 @@ async def convert_excel(file: UploadFile = File(...), background_tasks: Backgrou
                             df_text.to_excel(writer, sheet_name=f"Page_{i+1}_Text", index=False)
                             text_found = True
 
-                    table = page.extract_table()
-                    if table and len(table) > 1:  # At least 1 row + header
-                        df_table = pd.DataFrame(table[1:], columns=table[0])
-                        df_table.to_excel(writer, sheet_name=f"Page_{i+1}_Table", index=False)
-
-                # ✅ Always write at least one sheet
-                if not text_found and not table_found:
-                    pd.DataFrame([["No text or table could be extracted from this PDF."]], columns=["Notice"])\
-                    .to_excel(writer, sheet_name="Empty", index=False)
+                    tables = page.extract_tables()
+                    for t_idx, table in enumerate(tables):
+                        if table and len(table) > 1:
+                            df_table = pd.DataFrame(table[1:], columns=table[0])
+                            df_table.to_excel(writer, sheet_name=f"Page_{i+1}_Table{t_idx+1}", index=False)
+                            table_found = True
+                            
+                            # ✅ Always write at least one sheet
+                            if not text_found and not table_found:
+                                pd.DataFrame([["No text or table could be extracted from this PDF."]], columns=["Notice"])\
+                                .to_excel(writer, sheet_name="Empty", index=False)
 
 
         background_tasks.add_task(delayed_delete, output_filename)
