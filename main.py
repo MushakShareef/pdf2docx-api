@@ -41,29 +41,40 @@ def delayed_delete(path: str):
     if os.path.exists(path):
         os.remove(path)
 
+
+from io import BytesIO
+import pdfplumber
+
 @app.post("/convert-ocr")
 async def convert_ocr(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
     try:
         contents = await file.read()
 
-        # ✅ File size check
         if len(contents) > MAX_FILE_SIZE_BYTES:
             return JSONResponse(
                 content={"error": f"File too large. Max allowed size is {MAX_FILE_SIZE_MB} MB."},
                 status_code=413
             )
 
-        # ✅ File type check
         if not file.filename.lower().endswith(".pdf") or file.content_type != "application/pdf":
             return JSONResponse(
                 content={"error": "Invalid file. Only PDF files are accepted."},
                 status_code=400
             )
 
-        # ✅ OCR Conversion
-        images = convert_from_bytes(contents)
-        extracted_text = "\n".join(pytesseract.image_to_string(img) for img in images)
+        # ✅ FAST text extraction
+        with pdfplumber.open(BytesIO(contents)) as pdf:
+            extracted_text = "\n".join(page.extract_text() or "" for page in pdf.pages)
 
+        # If nothing extracted, fallback to OCR
+        if not extracted_text.strip():
+            from pdf2image import convert_from_bytes
+            import pytesseract
+
+            images = convert_from_bytes(contents, dpi=150)
+            extracted_text = "\n".join(pytesseract.image_to_string(img) for img in images)
+
+        # Generate DOCX
         doc = Document()
         for line in extracted_text.splitlines():
             doc.add_paragraph(line)
@@ -71,10 +82,8 @@ async def convert_ocr(file: UploadFile = File(...), background_tasks: Background
         output_filename = f"{uuid.uuid4()}.docx"
         doc.save(output_filename)
 
-        # ✅ Delayed cleanup
         background_tasks.add_task(delayed_delete, output_filename)
 
-        # ✅ Return file with safe CORS header
         response = FileResponse(
             path=output_filename,
             filename="converted.docx",
@@ -89,7 +98,7 @@ async def convert_ocr(file: UploadFile = File(...), background_tasks: Background
             content={"error": "Internal server error", "details": str(e)},
             status_code=500
         )
-    
+
 
 
 @app.post("/convert-excel")
