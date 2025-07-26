@@ -27,6 +27,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def home():
+    return {"message": "📄 Welcome to PDF to Word/Excel API"}
+
+@app.get("/healthz")
+def health_check():
+    return {"status": "ok"}
+
+
 # 🧾 Optional info route for frontend to fetch limits
 @app.get("/info")
 def get_info():
@@ -169,3 +178,9 @@ async def convert_excel(file: UploadFile = File(...), background_tasks: Backgrou
         )
 
 
+if __name__ == "__main__":
+    import uvicorn
+    import os
+
+    port = int(os.environ.get("PORT", 8000))  # Use Render's PORT or default to 8000 locally
+    uvicorn.run("main:app", host="0.0.0.0", port=port)
