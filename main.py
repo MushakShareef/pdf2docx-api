@@ -131,7 +131,7 @@ async def convert_excel(file: UploadFile = File(...), background_tasks: Backgrou
             df_text = pd.DataFrame(lines, columns=["Extracted Text"])
             df_text.to_excel(writer, sheet_name=f"Page_{i+1}_Text", index=False)
             text_found = True
-            
+
         # ⚠️ If no text was found in any page, write a dummy sheet
         if not text_found:
             df_empty = pd.DataFrame([["No text could be extracted from this PDF."]], columns=["Notice"])
