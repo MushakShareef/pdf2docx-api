@@ -89,3 +89,61 @@ async def convert_ocr(file: UploadFile = File(...), background_tasks: Background
             content={"error": "Internal server error", "details": str(e)},
             status_code=500
         )
+    
+
+
+@app.post("/convert-excel")
+async def convert_excel(file: UploadFile = File(...), background_tasks: BackgroundTasks = None):
+    try:
+        contents = await file.read()
+
+        if len(contents) > MAX_FILE_SIZE_BYTES:
+            return JSONResponse(
+                content={"error": f"File too large. Max allowed size is {MAX_FILE_SIZE_MB} MB."},
+                status_code=413
+            )
+
+        if not file.filename.lower().endswith(".pdf") or file.content_type != "application/pdf":
+            return JSONResponse(
+                content={"error": "Invalid file. Only PDF files are accepted."},
+                status_code=400
+            )
+
+        # 🧠 PDF → Excel logic
+        import pdfplumber
+        import pandas as pd
+
+        output_filename = f"{uuid.uuid4()}.xlsx"
+        with pdfplumber.open(file.file) as pdf:
+            with pd.ExcelWriter(output_filename, engine="openpyxl") as writer:
+                for i, page in enumerate(pdf.pages):
+                    text = page.extract_text()
+                    table = page.extract_table()
+                    
+                    # Save text
+                    if text:
+                        df_text = pd.DataFrame([line.strip() for line in text.split('\n')], columns=["Text"])
+                        df_text.to_excel(writer, sheet_name=f"Page_{i+1}_Text", index=False)
+
+                    # Save table
+                    if table:
+                        df_table = pd.DataFrame(table[1:], columns=table[0])
+                        df_table.to_excel(writer, sheet_name=f"Page_{i+1}_Table", index=False)
+
+        background_tasks.add_task(delayed_delete, output_filename)
+
+        response = FileResponse(
+            path=output_filename,
+            filename="converted.xlsx",
+            media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        return response
+
+    except Exception as e:
+        print("🔥 ERROR:", traceback.format_exc())
+        return JSONResponse(
+        content={"error": "Internal server error", "details": str(e)},
+        status_code=500
+        )
+
